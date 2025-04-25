@@ -6,5 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "langchain>=0.3.24",
+    "langchain-anthropic>=0.3.12",
     "langgraph>=0.3.33",
+    "langsmith>=0.3.33",
+    "mcp>=1.6.0",
+    "openai>=1.76.0",
+    "python-dotenv>=1.1.0",
 ]
