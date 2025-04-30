@@ -12,5 +12,6 @@ dependencies = [
     "langsmith>=0.3.33",
     "mcp>=1.6.0",
     "openai>=1.76.0",
+    "psycopg>=3.2.6",
     "python-dotenv>=1.1.0",
 ]
