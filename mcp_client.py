@@ -59,14 +59,12 @@ class MCPClient:
         for tool in tools:
             print(f"  {tool.name}: {tool.description}")
 
-    async def process_query(self, query: str, message: list) -> list:
+    async def process_query(self, query: str, messages: list) -> list:
         # call the openai api with streaming, and use the tools
         try:
-            full_response = ""
-            message.append({"role": "user", "content": query})
+            messages.append({"role": "user", "content": query})
 
             response = await self.session.list_tools()
-
             available_tools = [
                 {
                     "type": "function",
@@ -79,31 +77,64 @@ class MCPClient:
                 for tool in response.tools
             ]
 
-            print("Response: ", end="", flush=True)
-
-            # Create a streaming response
-            stream = await asyncio.get_event_loop().run_in_executor(
+            # use run_in_executor to run the synchronous method
+            # TODO: Stream the response
+            response = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: self.openai_client.chat.completions.create(
                     model=self.llm_model,
-                    messages=message,
+                    messages=messages,
                     tools=available_tools,
                     tool_choice="auto",
-                    stream=True,  # Enable streaming
                 ),
             )
 
-            # Process the stream chunks
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content
-                    print(content, end="", flush=True)
-                    full_response += content
-            print()  # Add a newline at the end
+            # handle the response context
+            content = response.choices[0]
+            if content.finish_reason == "tool_calls":
+                tool_call = content.message.tool_calls[0]
+                tool_name = tool_call.function.name
+                tool_args_str = tool_call.function.arguments
 
-            # append the full response to the message
-            message.append({"role": "assistant", "content": full_response})
-            return message
+                # parse the JSON string to a Python dictionary
+                tool_args_dict = json.loads(tool_args_str)
+
+                result = await self.session.call_tool(tool_name, tool_args_dict)
+                print(f"Tool {tool_name} called with args {tool_args_str}")
+
+                # append the tool call to the messages
+                messages.append(content.message.model_dump())
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result.content[0].text,
+                    }
+                )
+
+                # use run_in_executor to call the OpenAI API again
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self.openai_client.chat.completions.create(
+                        model=self.llm_model,
+                        messages=messages,
+                    ),
+                )
+
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": response.choices[0].message.content,
+                    }
+                )
+            else:
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": response.choices[0].message.content,
+                    }
+                )
+            return messages
 
         except Exception as e:
             print(f"Error: {e}")
@@ -114,16 +145,14 @@ class MCPClient:
             {"role": "system", "content": "You are a helpful assistant."},
         ]
 
-        print("mcp client chat loop started, type 'exit' to quit")
+        print("mcp client chat loop started, type 'exit' or 'quit' to quit")
         while True:
             try:
                 query = input("Query: ").strip()
                 if query.lower() == "exit" or query.lower() == "quit":
                     break
-                await self.process_query(query, message)
-                # history = await self.process_query(query, message)
-                # history = json.dumps(history, indent=2)
-                # print(history)
+                response = await self.process_query(query, message)
+                print(response)
 
             except Exception as e:
                 print(f"Error: {e}")
