@@ -39,8 +39,8 @@ def format_weather(data: dict[str, Any]) -> str:
     """Format the weather data into a string"""
     if isinstance(data, dict):
         try:
-            return f"Weather in {data['name']}: {data['main']['temp']}°C, {data['weather'][0]['description']}"
-            # return json.dumps(data)
+            return json.dumps(data)
+            # return f"Weather in {data['name']}: {data['main']['temp']}°C, {data['weather'][0]['description']}"
         except Exception as e:
             return f"Error formatting weather data: {e}"
 
@@ -56,13 +56,14 @@ async def query_weather(city: str) -> str:
 
 if __name__ == "__main__":
 
-    # test the query_weather function
-    import asyncio
+    # # test the query_weather function
+    # import asyncio
 
-    async def test():
-        result = await query_weather("Taipei")
-        print(f"Test result: {result}")
+    # async def test():
+    #     result = await query_weather("Taipei")
+    #     print(f"Test result: {result}")
+    #     print(type(result))
 
-    asyncio.run(test())
+    # asyncio.run(test())
 
-    # mcp.run(transport="stdio")
+    mcp.run(transport="stdio")
