@@ -5,5 +5,5 @@ for line in sys.stdin:
         print("Quitting...")
         break
     else:
-        print(f"Received: {line.strip()}")
-        print("record successfully", file=sys.stderr)
+        print(f"Received: {line.strip()}")  # stdout
+        print("No error", file=sys.stderr)  # stderr
