@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import sys
+import traceback
 from contextlib import AsyncExitStack
 from typing import Optional
 
@@ -121,23 +122,19 @@ class MCPClient:
                     ),
                 )
 
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": response.choices[0].message.content,
-                    }
-                )
-            else:
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": response.choices[0].message.content,
-                    }
-                )
+            # in all cases, append the assistant response to the messages
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": response.choices[0].message.content,
+                }
+            )
+
             return messages
 
         except Exception as e:
             print(f"Error: {e}")
+            traceback.print_exc()
             return "An error occurred while processing the query."
 
     async def chat_loop(self):
@@ -151,8 +148,9 @@ class MCPClient:
                 query = input("Query: ").strip()
                 if query.lower() == "exit" or query.lower() == "quit":
                     break
-                response = await self.process_query(query, message)
-                print(response)
+                history = await self.process_query(query, message)
+                # print(json.dumps(history, indent=2))
+                print(history[-1]["content"])
 
             except Exception as e:
                 print(f"Error: {e}")
